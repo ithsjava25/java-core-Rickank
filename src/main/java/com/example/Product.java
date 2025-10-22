@@ -10,6 +10,12 @@ public abstract class Product {
     private BigDecimal price;
 
     public Product(UUID id, String name, Category category, BigDecimal price) {
+        if (id == null) throw new IllegalArgumentException("Product ID cannot be null.");
+        if (name == null || name.isBlank()) throw new IllegalArgumentException("Product name cannot be null or blank.");
+        if (category == null) throw new IllegalArgumentException("Product category cannot be null.");
+        if (price == null || price.compareTo(BigDecimal.ZERO) < 0)
+            throw new IllegalArgumentException("Price cannot be null or negative.");
+
         this.id = id;
         this.name = name;
         this.category = category;
