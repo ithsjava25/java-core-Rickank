@@ -20,6 +20,7 @@ public final class Category {
         if (trimmed.isEmpty()) {
             throw new IllegalArgumentException("Category name can't be blank");
         }
+        //normalize name, first Uppercase rest lowercase
         String normalized = trimmed.substring(0, 1).toUpperCase() + trimmed.substring(1).toLowerCase();
         return FLYWEIGHT_MAP.computeIfAbsent(normalized, Category::new);
     }
