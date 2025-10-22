@@ -5,6 +5,7 @@ public class Warehouse {
     }
 
     public static Warehouse getInstance(String name) {
+        return null;
     }
 
     public void addProduct(Product product) {
