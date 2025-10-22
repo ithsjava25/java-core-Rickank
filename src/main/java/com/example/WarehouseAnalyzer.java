@@ -13,11 +13,11 @@ import java.util.stream.Collectors;
  */
 class WarehouseAnalyzer {
     private final Warehouse warehouse;
-    
+
     public WarehouseAnalyzer(Warehouse warehouse) {
         this.warehouse = warehouse;
     }
-    
+
     // Search and Filter Methods
     /**
      * Finds all products whose price is within the inclusive range [minPrice, maxPrice].
@@ -37,7 +37,7 @@ class WarehouseAnalyzer {
         }
         return result;
     }
-    
+
     /**
      * Returns all perishable products that expire within the next {@code days} days counting from today,
      * including items that expire today, and excluding items already expired. Non-perishables are ignored.
@@ -60,7 +60,7 @@ class WarehouseAnalyzer {
         }
         return result;
     }
-    
+
     /**
      * Performs a case-insensitive partial name search.
      * Test expectation: searching for "milk" returns all products whose name contains that substring,
@@ -79,7 +79,7 @@ class WarehouseAnalyzer {
         }
         return result;
     }
-    
+
     /**
      * Returns all products whose price is strictly greater than the given price.
      * While not asserted directly by tests, this helper is consistent with price-based filtering.
@@ -96,7 +96,7 @@ class WarehouseAnalyzer {
         }
         return result;
     }
-    
+
     // Analytics Methods
     /**
      * Computes the average price per category using product weight as the weighting factor when available.
@@ -136,7 +136,7 @@ class WarehouseAnalyzer {
         }
         return result;
     }
-    
+
     /**
      * Identifies products whose price deviates from the mean by more than the specified
      * number of standard deviations. Uses population standard deviation over all products.
@@ -147,24 +147,33 @@ class WarehouseAnalyzer {
      */
     public List<Product> findPriceOutliers(double standardDeviations) {
         List<Product> products = warehouse.getProducts();
-        int n = products.size();
-        if (n == 0) return List.of();
-        double sum = products.stream().map(Product::price).mapToDouble(bd -> bd.doubleValue()).sum();
-        double mean = sum / n;
-        double variance = products.stream()
+        if (products.isEmpty()) return List.of();
+
+        List<BigDecimal> prices = products.stream()
                 .map(Product::price)
-                .mapToDouble(bd -> Math.pow(bd.doubleValue() - mean, 2))
-                .sum() / n;
-        double std = Math.sqrt(variance);
-        double threshold = standardDeviations * std;
+                .sorted()
+                .collect(Collectors.toList());
+
+        int n = prices.size();
+        int q1Index = n / 4;
+        BigDecimal q1 = (n % 4 == 0) ? prices.get(q1Index - 1).add(prices.get(q1Index)).divide(BigDecimal.valueOf(2), 10, BigDecimal.ROUND_HALF_UP) : prices.get(q1Index);
+        int q3Index = 3 * n / 4;
+        BigDecimal q3 = (n % 4 == 0) ? prices.get(q3Index - 1).add(prices.get(q3Index)).divide(BigDecimal.valueOf(2), 10, BigDecimal.ROUND_HALF_UP) : prices.get(q3Index);
+
+        BigDecimal iqr = q3.subtract(q1);
+        BigDecimal lowerBound = q1.subtract(iqr.multiply(BigDecimal.valueOf(1.5)));
+        BigDecimal upperBound = q3.add(iqr.multiply(BigDecimal.valueOf(1.5)));
+
         List<Product> outliers = new ArrayList<>();
         for (Product p : products) {
-            double diff = Math.abs(p.price().doubleValue() - mean);
-            if (diff > threshold) outliers.add(p);
+            BigDecimal price = p.price();
+            if (price.compareTo(lowerBound) < 0 || price.compareTo(upperBound) > 0) {
+                outliers.add(p);
+            }
         }
         return outliers;
     }
-    
+
     /**
      * Groups all shippable products into ShippingGroup buckets such that each group's total weight
      * does not exceed the provided maximum. The goal is to minimize the number of groups and/or total
@@ -201,7 +210,7 @@ class WarehouseAnalyzer {
         for (List<Shippable> bin : bins) groups.add(new ShippingGroup(bin));
         return groups;
     }
-    
+
     // Business Rules Methods
     /**
      * Calculates discounted prices for perishable products based on proximity to expiration.
@@ -237,7 +246,7 @@ class WarehouseAnalyzer {
         }
         return result;
     }
-    
+
     /**
      * Evaluates inventory business rules and returns a summary:
      *  - High-value percentage: proportion of products considered high-value (e.g., price >= some threshold).
@@ -261,7 +270,7 @@ class WarehouseAnalyzer {
         int diversity = (int) items.stream().map(Product::category).distinct().count();
         return new InventoryValidation(percentage, diversity);
     }
-    
+
     /**
      * Aggregates key statistics for the current warehouse inventory.
      * Test expectation for a 4-item setup:
@@ -357,7 +366,7 @@ class InventoryStatistics {
         this.averagePrice = averagePrice;
         this.expiredCount = expiredCount;
         this.categoryCount = categoryCount;
-        this.mostExpensiveProduct = mostExpensiveProduct;
+        this.mostExpensiveProduct= mostExpensiveProduct;
         this.cheapestProduct = cheapestProduct;
     }
 
