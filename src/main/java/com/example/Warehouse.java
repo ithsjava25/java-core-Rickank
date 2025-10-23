@@ -6,9 +6,9 @@ import java.util.stream.Collectors;
 
 public class Warehouse {
     private static final Map<String, Warehouse> INSTANCES = new HashMap<>();
-    private final String name;
     private final Map<UUID, Product> products = new HashMap<>();
     private final Set<UUID> changedProducts = new HashSet<>();
+    private final String name;
 
     private Warehouse(String name) {
         this.name = name;
