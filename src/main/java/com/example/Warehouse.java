@@ -8,10 +8,8 @@ public class Warehouse {
     private static final Map<String, Warehouse> INSTANCES = new HashMap<>();
     private final Map<UUID, Product> products = new HashMap<>();
     private final Set<UUID> changedProducts = new HashSet<>();
-    private final String name;
 
     private Warehouse(String name) {
-        this.name = name;
     }
 
     //singleton pattern: returns unique Warehouse instance per name
@@ -52,10 +50,6 @@ public class Warehouse {
         }
         product.price(newPrice);
         changedProducts.add(id); //track price changes
-    }
-
-    public Set<UUID> getChangedProducts() {
-        return Collections.unmodifiableSet(new HashSet<>(changedProducts));
     }
 
     public List<Perishable> expiredProducts() {
