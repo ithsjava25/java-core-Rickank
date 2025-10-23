@@ -96,30 +96,34 @@ class WarehouseAnalyzer {
         return result;
     }
 
-    public List<Product> findPriceOutliers(double standardDeviations) {
+    public List<Product> findPriceOutliers(double deviationFactor) {
         List<Product> products = warehouse.getProducts();
-        if (products.isEmpty()) return List.of();
+        int n = products.size();
+        if (n == 0) return List.of();
 
-        BigDecimal sum = products.stream()
-                .map(Product::price)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal mean = sum.divide(BigDecimal.valueOf(products.size()), 10, RoundingMode.HALF_UP);
+        //sortera priser
+        var sortedProducts = products.stream()
+                .sorted(Comparator.comparing(Product::price))
+                .toList();
 
-        BigDecimal variance = products.stream()
-                .map(Product::price)
-                .map(price -> price.subtract(mean).pow(2))
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(products.size()), 10, RoundingMode.HALF_UP);
+        //räkna ut vart första och tredje kvartilen ligger
+        int q1Index = n / 4;
+        int q3Index = (3 * n) / 4;
 
-        BigDecimal stdDev = new BigDecimal(Math.sqrt(variance.doubleValue()));
+        //priserna på 25% och 75% positionerna
+        BigDecimal q1 = sortedProducts.get(q1Index).price();
+        BigDecimal q3 = sortedProducts.get(q3Index).price();
+        BigDecimal iqr = q3.subtract(q1);
 
-        BigDecimal threshold = stdDev.multiply(BigDecimal.valueOf(standardDeviations));
-        BigDecimal lowerBound = mean.subtract(threshold);
-        BigDecimal upperBound = mean.add(threshold);
+        //räkna ut när ett pris är för lågt eller högt
+        BigDecimal lowerBound = q1.subtract(iqr.multiply(BigDecimal.valueOf(deviationFactor)));
+        BigDecimal upperBound = q3.add(iqr.multiply(BigDecimal.valueOf(deviationFactor)));
 
-        return products.stream()
-                .filter(p -> p.price().compareTo(lowerBound) < 0 || p.price().compareTo(upperBound) > 0)
-                .collect(Collectors.toList());
+        //hitta outliers
+        return sortedProducts.stream()
+                .filter(product -> product.price().compareTo(lowerBound) < 0 ||
+                        product.price().compareTo(upperBound) > 0)
+                .toList();
     }
 
     public List<ShippingGroup> optimizeShippingGroups(BigDecimal maxWeightPerGroup) {
